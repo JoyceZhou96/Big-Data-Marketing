@@ -1,0 +1,47 @@
+library(rvest)
+library(stringr)
+library(openxlsx)
+url0 <- 'https://edu.hellobi.com/course/explore'
+
+
+res <- read_html(url0,encoding = 'utf-8')
+data_nodes <- html_nodes(res,'a')   #select tag like <div></div> <li></li>
+data_attrs <- html_attrs(data_nodes) #select all attributes like <li class="col-md"> what's quoted is attributes
+#data_attr <-html_attr(data_nodes,name)   
+#select qualified attributes
+
+data_nodes <- html_nodes(res,'ul.pagination li a')
+course_page <- html_text(data_nodes) #pick up text inside of two tags
+
+page_max <-course_page[length(course_page)-1]%>%as.integer()
+
+course <- data.frame(Name = "course_name", Length = "course_length", hot.1 = "",Hot.2 = "course_hot",Link = "course_link")
+
+
+for (i in 1:page_max){
+  url1 <- paste0(url0,'?page=',i)
+  web <- read_html(url1,encoding = 'utf-8')
+  web_notes <- html_nodes(web,'div.mt30 div.caption h3')
+  
+  course_name <- html_text(web_notes,trim = TRUE) # remove \n line break
+
+  course_length <- html_text(html_nodes(web,'div.mt30 div.caption span.length'))
+  
+  course_hot <- html_text(html_nodes(web,'div.mt30 div.caption span.pull-right'))
+  
+  course_link <- html_attr(html_nodes(web,'div.mt30 div.caption h3 a'),'href')
+
+  course <- rbind(course,data.frame(Name = course_name, Length = course_length,  hot.1 = course_hot[seq(1,length(course_hot),2)],Hot.2 = course_hot[seq(2,length(course_hot),2)],Link = course_link))
+
+}
+
+
+dim(course)
+head(course)
+
+
+#write into xlsx
+wb <- createWorkbook()
+addWorksheet(wb,'course_detail',)
+writeDataTable(wb,1,course)
+saveWorkbook(wb,file = "course_detail.xlsx")

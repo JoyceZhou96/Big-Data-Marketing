@@ -1,0 +1,91 @@
+##Q1
+
+#Q1.1
+dim(airquality)   #airquality is default dataset inside R
+sprintf("airquality has %i rows, %i columns",dim(airquality)[1],dim(airquality)[2]) 
+
+#Q1.2 
+sprintf("the column names are %s", paste(colnames(airquality),collapse = ', '))  
+
+#Q1.3
+perfect_data <-na.omit(airquality) #remove na 
+head(perfect_data)
+
+#Q1.4
+data_month_5 <- perfect_data[perfect_data$Month == 5,] 
+head(data_month_5)
+
+
+#Q1.5
+wind_7_8 <- sum(perfect_data$Wind<=8 & perfect_data$Wind>= 7)
+sprintf('%i rows of data are there with “Wind” between 7 and 8 inclusive',wind_7_8)
+
+#Q1.6
+index <- perfect_data$Solar.R*perfect_data$Wind/perfect_data$Temp
+perfect_data$Index = index
+head(perfect_data)
+
+#Q1.7
+data_selected <- perfect_data[,c('Solar.R', 'Index', 'Month','Day')]   #select aimed columns
+head(data_selected)
+
+#Q1.8
+max_day = tapply(perfect_data$Day,perfect_data$Month,max)
+sprintf(" the last day of month %s is %i",names(max_day),max_day) 
+
+#Q1.9
+T_range = tapply(perfect_data$Temp,perfect_data$Month,range)
+sprintf("the range of month %s is %s ",names(T_range), T_range)
+
+
+#Q2
+
+library(XML)
+library(RCurl)
+
+url1 <- 'http://statisticstimes.com/geography/countries-by-continents.php'
+url2 <- "https://www.worldometers.info/world-population/population-by-country/" 
+url3 <- "https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)_per_capita "
+url4 <- "https://en.wikipedia.org/wiki/List_of_countries_by_life_expectancy"
+
+
+urldata1 <- getURL(url1)
+urldata2 <- getURL(url2)
+urldata3 <- getURL(url3)
+urldata4 <- getURL(url4)
+
+data1 <- readHTMLTable(urldata1, stringsAsFactors = FALSE)
+data2 <- readHTMLTable(urldata2, stringsAsFactors = FALSE)
+data3 <- readHTMLTable(urldata3, stringsAsFactors = FALSE)
+data4 <- readHTMLTable(urldata4, stringsAsFactors = FALSE)
+
+#Process data1
+res <- data1[3:8] #remove null list
+region <- data.frame(A= numeric(0),B= numeric(0))   #set initial dataframe
+colnames(region)<- colnames(res[[1]])  
+for (i in names(res)) {                    #merge 6 continent countries data
+   region <- rbind(region,as.data.frame(res[[i]]))
+}
+
+
+#Process data2
+res2 <- as.data.frame(data2[["example2"]])
+population <-res2[,c("Country (or dependency)","Population (2019)")]
+
+#Process data3
+res3 <-as.data.frame(data3[5])
+colnames(res3) <- res3[1,]
+GDP <- res3[c(2:length(res3[,1])),2:3]
+
+#Process data4
+res4 <- as.data.frame(data4[3])
+colnames(res4) <- res4[1,]
+lifelong <- res4[c(2:length(res4[,1])),c("State/Territory", "Overall")]
+lifelong[,'State/Territory'] <- gsub("\\((.*?)\\)","",lifelong[,'State/Territory'])  #remove brackets and contents inside
+
+#Merge all dataframe
+all_data <- merge(region,population,by.x = "Country/Territory",by.y = "Country (or dependency)")
+all_data <- merge(all_data,GDP,by.x = "Country/Territory",by.y ="Country/Territory")
+all_data <- merge(all_data,lifelong,by.x = "Country/Territory",by.y ="State/Territory")
+colnames(all_data) <- c('country','region','Population',"GDP per capita",'life expectancy')
+head(all_data)

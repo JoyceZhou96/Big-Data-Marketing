@@ -1,0 +1,89 @@
+#Q1. One advantage of using ggplot2 is its flexibility of distinguishing data of different categories by using different parameters such as size, fill, colour, and shape. Try to plot a point chart using “countries.csv” uploaded in LumiNUS. Think of a smart way to distinguish the countries by their continent, population, GDP per capita, and life expectation.
+You may refer to the scatter plot in https://en.wikipedia.org/wiki/List_of_countries_by_life_expectancy to understand what I meant by distinguishing data by size and colour.
+
+library(ggplot2)
+countries<-read.csv('D:/课程/BDM/Lecture 3/countries.csv',header=T,stringsAsFactors = FALSE)
+
+ggplot(countries,aes(x=log (GDP_Per_Capita),y=Life_Expectancy))+geom_point(aes(colour =Continent,size = Population,shape = Continent),alpha = 4/10)+stat_smooth(method="lm", se=FALSE)+theme(legend.position = c(0.98,0.02),legend.justification = c("right", "bottom"))
+
+
+
+#Q2. Download “srx new.csv” from LumiNUS. The file contains around 2000 sample records of properties listed on SRX website. Please use ggplot2 to develop 5 different charts to visualise Singapore property market from different aspects. Write a brief summary about your findings for each chart.
+library(ggplot2)
+library(scales)
+srx<-read.csv('D:/课程/BDM/Lecture 3/srx new.csv',header=T,stringsAsFactors = FALSE)
+ggplot(srx,aes(x = PSF.Builtup.sqft,y = Asking.new)) + geom_point()+stat_smooth()+xlim(0,4000)+ylim(100000,30000000)
+
+#Conclusion :From the graphic, we could conclude that prices of houses have positive relation with the area of houses. To be more specific, as the area of a house increases, the price climbs as well.
+
+
+
+
+library(scales)
+srx_type <- na.omit(srx$Property.Type.)
+srx_type[grep("HDB",srx_type)] <- "HDB"
+srx_type_df <-as.data.frame(table(srx_type))
+ggplot(srx_type_df,aes(x = "",y = Freq, fill= srx_type))+geom_bar(stat = "identity")+coord_polar("y",start=0)+scale_fill_brewer(palette="Blues")+ggtitle ("Distribution for Different Property Types")+ theme_void()
+
+
+#Conclusion: From the graphic, we could conclude that Condominium houses are the most property type in Singapore. Houses in HDB and Condominium type dominate more than the half of property markets.
+
+
+srx_District <- na.omit(srx$District.)
+srx_District <- as.data.frame(substr(srx_District,1,4))
+colnames(srx_District) <- "District"
+srx_District_df <- as.data.frame(table(srx_District))
+ggplot(srx_District_df,aes(x = reorder(srx_District, -Freq),  y = Freq, fill =srx_District))+geom_bar(stat = "identity")+coord_flip()
+
+#Conculsion: From the bar graphic we could see District D19 and D9 concentrate the most two properties, while D22 and D13 have the less two properties.
+
+
+Year <- as.data.frame(na.omit(srx$Built.Year.))
+colnames(Year) <- "Year"
+ggplot(Year) + geom_density(aes(x=Year), binwidth=5, fill="lightblue") +ggtitle("Yearly New Property")
+
+
+From the graphic, we know that the amount of  properties increases wavily; After 1998, the number of  properties exploded, but since 2015 decreases dramatically (why?).
+
+options(scipen =200)
+ggplot(srx,aes(x=Asking.new)) + geom_density(fill = "lightblue")+xlim(220000,15000000)
+
+
+#Conclusion: From the graphic we could get a conculsion that after the house amount reach its peak at a certain price, its distribution follows exponential distribution; Before this price, the number of houses increases exponentially.
+
+
+#Q3. As explained in class, convert the Singapore residence data into a more flexible structure.
+
+```{r}
+library(stringr) 
+residents<-read.csv('D:/课程/BDM/Lecture 3/singapore-residents-by-age-group-ethnic-group-and-sex-end-june-annual.csv',header=T,stringsAsFactors = FALSE)
+residents <- as.data.frame(residents)
+
+
+colnames(residents) <- c('year','type','age_range','population') # rename column name
+
+# clean age
+res <- residents[which(residents$age_range != "65 Years & Over" & residents$age_range !="70 Years & Over" & residents$age_range !="75 Years & Over"& residents$age_range !="85 Years & Over"),]  # clean age
+
+#add identity "gender"
+res$gender <- ifelse(grepl("Male",res$type), "Male",ifelse(grepl("Female",res$type),"Female","None")) 
+res <- res[which(res$gender!="None"),]
+
+#add identity "ethnic"
+res$type <- word(res$type,-1) 
+res$type[which(grepl("(Males)",res$type)|grepl("(Females)",res$type))] <- "Other Ethnic"
+
+
+colnames(res) <- c('Year','Ethnic','Age_range','Population','Gender') #rename again
+
+#Fill "na" with mean
+res$Population[which(res$Population == "na" & res$Age_range == "70 - 74 Years")] <- round(mean.default(as.numeric(res$Population[res$Age_range == "70 - 74 Years"]),na.rm = TRUE),0)
+
+res$Population[which(res$Population == "na" & res$Age_range == "75 - 79 Years")] <- round(mean.default(as.numeric(res$Population[res$Age_range == "75 - 79 Years"]),na.rm = TRUE),0)
+
+res$Population[which(res$Population == "na" & res$Age_range == "80 - 84 Years")] <- round(mean.default(as.numeric(res$Population[res$Age_range == "80 - 84 Years"]),na.rm = TRUE),0)
+
+res$Population[which(res$Population == "na" & res$Age_range == "80 Years & Over")] <- round(mean.default(as.numeric(res$Population[res$Age_range == "80 Years & Over"]),na.rm = TRUE),0)
+
+res
+```

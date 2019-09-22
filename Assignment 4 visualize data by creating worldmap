@@ -1,0 +1,74 @@
+Q1
+
+library(ggplot2)
+pro <- read.csv("D:/课程/BDM/Lecture 4/Assignment/by-type-of-property-base-quarter-2009-q1-100.csv",header = TRUE, stringsAsFactors = FALSE)
+
+colnames(pro) <- c("Quarter","Residence_Type", "Landed_Type","Index")
+
+#plot with whole data
+plot <- ggplot(pro,aes(x=Quarter, y = Index, group = Landed_Type))+geom_line(aes(colour = Landed_Type)) + theme(axis.text.x = element_text(angle = 90))
+
+#change x axis
+plot1 <- plot + scale_x_discrete(labels=function(x)ifelse(grepl("Q1",x),substr(pro$Quarter,start=1,stop=4),""))
+
+
+#change graphic name, axis name, etc
+plot2 <- plot1 + labs(title = "Property Index by Type", x = "Year" ,y = "Index")
+plot2
+
+From graphic, we could say landed properties has same trend as non-landed ones which means when landed properties's indexes increase, non-landed ones would increase as well, and vise varsa; The general trend of two types properties rises. There are two apparant severe drops at year 1995, 2007 resulting from two economic crisis.
+
+Q2
+library(ggplot2)
+library(scales)
+srx<-read.csv('D:/课程/BDM/Lecture 3/srx new.csv',header=T,stringsAsFactors = FALSE)
+
+#delete na in district& PSF
+srx <- srx[-which(is.na(srx$District.)),]
+srx <- srx[-which(is.na(srx$PSF.Builtup.sqft)),]
+
+#replace impossible psf with avg or delete directly
+srx$PSF_Builtup <- ifelse(srx$PSF.Builtup.sqft<200,mean(srx$PSF.Builtup.sqft),srx$PSF.Builtup.sqft)
+srx <- srx[srx$Asking.new<50000000,]
+
+#calculate mean asking price and PSF of each district
+df <- aggregate(x = srx$Asking.new, by= list(srx$District.), FUN = mean)
+df2 <- aggregate(x = srx$PSF_Builtup, by= list(srx$District.), FUN = mean)
+df$PSF <- df2$x
+colnames(df) <- c("District","Avg_Asking_Price","Avg_PSF")
+
+#make graphic about Avg Asking Price by district
+plot <- ggplot(df)+geom_bar(aes(x = reorder(District, -Avg_Asking_Price ) , y = Avg_Asking_Price, fill = Avg_Asking_Price) ,stat = "identity") +theme(axis.text.x = element_text(angle = 90,size = 5)) +guides(fill=FALSE) + labs(title = "Avg Asking Price & Avg PSF by District", x = "District", y = "Avg Asking Price")
+
+#add Avg_PSF on previous graphic
+plot2 <-plot + geom_point(aes(x = District, y = Avg_PSF*2000)) +geom_line(aes(x = District, y = Avg_PSF*2000, group = 1))+ scale_y_continuous(labels = function(x) format(x, scientific = FALSE), sec.axis = sec_axis(~. /2000, name = "Avg_PSF")) +  theme(axis.title.y = element_text(color = "grey")) 
+
+plot2
+
+
+From the plot, we could conculde there is no strict correlationship bewteen average PSF and asking price. 
+
+#Q3
+
+library(ggmap)
+library(dplyr)
+
+#load data set
+countries <- read.csv("D:/课程/BDM/Lecture 3/countries.csv",stringsAsFactors = FALSE)
+
+#collet world map information
+world <- map_data("world")
+
+#change country names accordingly
+countries$Country <- recode(countries$Country,'United States' = 'USA','United Kingdom' = 'UK', "Antigua & Barbuda" = "Antigua", "Bosnia & Herzegovina"="Bosnia and Herzegovina", "Congo - Brazzaville" = "Republic of Congo","Congo - Kinshasa" = "Democratic Republic of the Congo", "czech"= "Czech Republic","Myanmar (Burma)" = "Myanmar","St. Lucia" = "Saint Lucia","St. Vincent & Grenadines" = "Saint Vincent","Trinidad & Tobago" = "Trinidad")
+
+# merge two data set
+map_joined <- left_join(world, countries, by = c('region' = 'Country'))
+
+#create world map
+worldmap <- ggplot(map_joined, aes(x=long, y=lat, group = group,color = "red")) +geom_polygon(aes(fill =GDP_Per_Capita)) + scale_fill_gradient(low = "white",high = "red")
+
+#edit world map
+worldmap <- worldmap + labs(title = "World GDP per Capita", x = "Longitude" ,y = "Latitude")
+
+worldmap

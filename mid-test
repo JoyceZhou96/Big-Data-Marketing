@@ -1,0 +1,88 @@
+#Q1 Load the data into R environment. Convert “Event.Date” into “Date” class. Generate a new column to indicate the year of the event and a new column to indicate the decade of the event. 
+
+library(dplyr)
+library(plyr)   #supply count function
+avi <- read.csv("D:/2019I/BDM/Lecture 5/Aviation Data.csv",stringsAsFactors = FALSE)avi$Event.Date <- as.Date(avi$Event.Date)
+
+#Q1 Year of event
+avi$year <- format(avi$Event.Date,'%Y')
+
+#Q1 decade of event
+avi$decade <- as.numeric(avi$year)%/%10
+avi$decade <- paste0(as.character(avi$decade),"0s")
+
+head(avi,5)
+
+
+#Q2  Identify the overall top five countries in terms of number of events occurring. Do the same thing by decades. Is there any shift in the top five countries?   
+cleaned_avi <- avi[avi$Country != "",]
+res_year <- as.data.frame(table(cleaned_avi$Country))
+res_year <- res_year[order(res_year$Freq,decreasing = TRUE),]
+
+sprintf("top five countries are %s", paste(as.character(res_year[c(1:5),1]),collapse = ', '))
+
+
+#Q2 the overall top five countries by decade
+res <-tapply(cleaned_avi$Country, as.factor(cleaned_avi$decade), count)
+
+for (i in length(res)) {
+  temp <- as.data.frame(res[i])
+  temp <- temp[order(temp[,2],decreasing = TRUE),]
+  temp[c(1:5),1]
+  }
+
+
+#Q3 US should be the number 1 country in Q2. Use data visualization to understand the trend of number of incidents and number of accidents occurring in US.
+library(ggplot2)
+
+us_df <- avi[avi$Country=="United States",]
+us_df <- us_df[us_df$year >1981,]
+
+#create a basic plot
+pl <-ggplot(us_df)+geom_line(aes(x=year,group = Investigation.Type, color = Investigation.Type), stat = "count") +theme(axis.text.x = element_text(angle = 90)) + facet_wrap(~Investigation.Type,nrow = 2,scales = "free_y")
+
+pl
+
+
+#Q4 There are three kinds of weather conditions given in the dataset: 
+#    •	VMC - VMC is meteorological conditions expressed in terms of visibility, distance from cloud, and ceiling equal to or better than specified minima.
+#    •	UNK – Unknown
+#    •	The definition of IMC, according to the FAA, is meteorological conditions expressed in terms of visibility, distance from clouds, and ceiling less than the minima specified for visual meteorological conditions (VMC).
+#   Use data visualization to illustrate your findings on how weather conditions affect the happening of incidents/accidents and the trend. Are your findings intuitive or counter-intuitive? Why?  
+
+#clean data
+avi_1982 <- avi[avi$year >1981,]
+avi_1982 <- avi_1982[avi_1982$Weather.Condition != "", ]
+
+#create a basic plot about accidents and incidents
+gpl1 <- ggplot(avi_1982) + geom_bar(aes(x=year,group = Weather.Condition, fill = Weather.Condition), position='dodge', stat = "count") + theme(axis.text.x=element_text(angle=90,size=10,vjust = 0.5))
+
+gpl1
+
+gpl2 <- ggplot(avi_1982) + geom_bar(aes(x=year,group = Weather.Condition, fill = Weather.Condition), position='fill', stat = "count") + theme(axis.text.x=element_text(angle=90,size=10,vjust = 0.5))
+gpl2
+
+#Q5 Understanding how data is classified is very important in data analysis. Note that there is a field named "Total.Fatal.Injuries" that records the total number of fatal injuries in the events. Use "table" function on this field to see the distribution of number of fatal injuries. There is another field named "Injury.Severity" that also records number of fatal injuries. Compare data in these two fields. Do you observe any inconsistency? What could be the cause of the inconsistency? Please re-classify the severity of events by number of fatal injuries in the following groups:
+#   •	"Fatal" - event that has at least one fatal injuries
+#   •	"Non-Fatal" - event without fatal injuries
+#   •	"Unknown" - original field is "NA"
+
+dtbf <- as.data.frame(table(avi$Total.Fatal.Injuries))
+dtbs <- as.data.frame(table(avi$Injury.Severity))
+
+# the inconsistency is that the vaule where the fatal injury number is 1, 2, 3 is not same as severity of events by number. That may because 
+
+avi_1982$Injury.Severity1 <- ifelse(avi_1982$Total.Fatal.Injuries>0,"Fatal",ifelse(avi_1982$Total.Fatal.Injuries == 0, "Non-Fatal","Unknown"))
+
+plot_svt <- ggplot(data=avi_1982, aes(x=year,group=Injury.Severity1)) + geom_bar(aes(fill=Injury.Severity1),position='dodge',stat = "count") + theme(axis.text.x=element_text(angle=90,size=10,vjust = 0.5))
+
+plot_svt 
+
+#Q6  Use the spatial data in the dataset to plot meaningful charts on US map. Write a short paragraph about your findings.(heatmap)
+library(ggmap)
+
+us_map <- qmap("United State",zoom = 3)
+
+m1 <- us_map + stat_density2d(aes(x=us_df$Longitude, y = us_df$Latitude, color = ..level.., alpha = ..level..), data=us_df,geom = "point") + scale_color_continuous(low = "green", high = "red") 
+
+m1
